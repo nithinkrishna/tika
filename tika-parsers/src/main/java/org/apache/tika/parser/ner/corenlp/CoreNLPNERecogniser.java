@@ -149,6 +149,48 @@ public class CoreNLPNERecogniser implements NERecogniser {
         }
         return names;
     }
+    
+    /**
+     * recognises names of entities in the text
+     * @param text text which possibly contains names
+     * @return map of entity type -> set of names
+     */
+    public Map<String, Map<String,Integer>> recogniseWithCounts(String text) {
+        Map<String, Map<String,Integer>> names = new HashMap<>();
+        try {
+        	LOG.warn("CLASSIFY METHOD : " + classifyMethod.toString());
+            Object result = classifyMethod.invoke(classifierInstance, text);
+            
+            List entries = (List) result;
+            for (Object entry : entries) {
+                String entityType = (String) firstField.get(entry);
+                if (!names.containsKey(entityType)) {
+                    names.put(entityType, new HashMap<String,Integer>());
+                }
+                Integer start = (Integer) secondField.get(entry);
+                Integer end = (Integer) thirdField.get(entry);
+                String name = text.substring(start, end);
+                //Clean repeating spaces, replace line breaks and tabs with single space
+                name = name.trim().replaceAll("(\\s\\s+)|\n|\t", " ");
+                if (!name.isEmpty()) {
+                    // If name already found, then just increment its count.
+                    if (names.get(entityType).containsKey(name)) {
+                        int count = names.get(entityType).get(name);
+                        names.get(entityType).put(name, count + 1);
+                    }
+                    else {
+                        // If name not in map, then add it and initialize count to 1.
+                        names.get(entityType).put(name,1);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+        	LOG.warn(e.getMessage(), e);
+            LOG.debug(e.getMessage(), e);
+        }
+        return names;
+    }
 
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
